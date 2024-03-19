@@ -1,5 +1,15 @@
 #include "Encode.h"
 
+Dict::Dict() {
+    dict = (DictElem*)calloc(DICT_INIT_COUNT, sizeof(DictElem));
+    size = 0;
+};
+
+Dict::~Dict() {
+    if (dict != nullptr)
+        free(dict);
+};
+
 void InsertToDict(Dict* dict, const char* elem, int code) {
 
     assert(dict != nullptr);
@@ -60,9 +70,13 @@ void FillStartDict(Dict* dict, const char* data) {
     free(change_data);
 }
 
-void LZWEncodeData(const char* data, FILE* output) {
+void LZWEncodeData(FILE* source, FILE* output) {
 
-    assert(data != nullptr);
+    assert(source != nullptr);
+    assert(output != nullptr);
+
+    char data[MAX_FILE_SIZE] = "";
+    fread(data, sizeof(char), MAX_FILE_SIZE, source);
 
     Dict dict = Dict();
 

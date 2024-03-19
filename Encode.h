@@ -17,21 +17,11 @@ struct DictElem {
 
 struct Dict {
 
-    Dict() {
-        dict = (DictElem*)calloc(DICT_INIT_COUNT, sizeof(DictElem));
-        size = 0;
-    };
-
-    ~Dict() {
-        if (dict != nullptr)
-            free(dict);
-    };
+    Dict();
+    ~Dict();
 
     DictElem* dict;
     size_t size;
 };
 
-void InsertToDict(Dict* dict, const char* elem, int code);
-int  CheckElemInDict(Dict* dict, char* elem);
-
-void LZWEncodeData(const char* data, FILE* output);
+void LZWEncodeData(FILE* source, FILE* output);

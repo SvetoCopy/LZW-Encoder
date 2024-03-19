@@ -13,10 +13,7 @@ int main(int argc, const char* argv[])
 	FILE* output = {};
 	fopen_s(&output, argv[2], "w");
 
-	char source_data[MAX_FILE_SIZE] = "";
-	fread(source_data, sizeof(char), MAX_FILE_SIZE, source);
-
-    LZWEncodeData(source_data, output);
+    LZWEncodeData(source, output);
 
 	fclose(output);
 	fclose(source);
