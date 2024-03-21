@@ -61,6 +61,8 @@ char* GetStrFromTable(Dict* dict, unsigned short code) {
             return dict->dict[i].key;
         }
     }
+
+    return nullptr;
 }
 
 void PrintDict(Dict* dict) {
@@ -88,45 +90,40 @@ void FillStartDict(Dict* dict) {
     }
 }
 
-char ReadCode(char* data, int num) {
-
-    assert(data != nullptr);
-
-    return data[num];
-}
-
 void LZWDecodeData(FILE* source, FILE* output) {
 
     assert(source != nullptr);
     assert(output != nullptr);
 
     Dict dict = Dict();
-    FillStartDict(&dict);
 
-    unsigned short code = 0;
-    fread(&code, sizeof(unsigned short), 1, source);
+    
+    unsigned short read_buff[MAX_FILE_SIZE] = {};
+    fread(&read_buff, sizeof(unsigned short), MAX_FILE_SIZE, source);
+
+    unsigned short code = read_buff[0];
 
     unsigned short old_code = 0;
-    unsigned short fill_code = 0;
+    unsigned short fill_code = dict.size;
+    int k = 1;
 
-    while (code != END_CODE) {
+    while (code != END_CODE ) {
 
         if (code == CLEAR_CODE) {
 
             dict.size = 0;
             FillStartDict(&dict);
             fill_code = dict.size;
+            
+            code = read_buff[k];
+            k++;
 
-            fread(&code, sizeof(unsigned short), 1, source);
-
-            if (code == END_CODE)
-            {
-                break;
-            }
+            if (code == END_CODE) break;   
 
             fprintf(output, "%s", GetStrFromTable(&dict, code));
             old_code = code;
         }
+
         else {
 
             if (inTable(&dict, code)) {
@@ -165,6 +162,8 @@ void LZWDecodeData(FILE* source, FILE* output) {
                 old_code = code;
             }
         }
+        code = read_buff[k];
+        k++;
     }
 }
 
@@ -173,40 +172,25 @@ void LZWEncodeData(FILE* source, FILE* output) {
     assert(source != nullptr);
     assert(output != nullptr);
 
-
     char data[MAX_FILE_SIZE] = "";
     fread(data, sizeof(char), MAX_FILE_SIZE, source);
 
     Dict dict = Dict();
-
     FillStartDict(&dict);
-    PrintDict(&dict);
 
-    char*  buff     = new char[200000];
+
+    char* buff = (char*)calloc(MAX_BUFF_SIZE, sizeof(char));
     size_t buff_len = 0;
 
-    buff[buff_len++] = data[0];
+    unsigned short elem_code = 0;
+    WriteCode(CLEAR_CODE);
 
     unsigned short code = dict.size;
 
-    for (int i = 1; data[i] != EOF; i++) {
+    int i = 0;
 
+    while (data[i] != EOF) { 
 
-        if (dict.size >= MAX_DICT_SIZE) {
-
-            dict.size = 0;   // clear dict
-
-            unsigned short clear_code = CLEAR_CODE;
-            printf("%hu", clear_code);
-            fwrite(&clear_code, sizeof(unsigned short), 1, output);
-            FillStartDict(&dict);
-            
-            buff_len = 0;
-
-            buff[buff_len++] = data[i];
-            code = dict.size;
-        }
-            
         buff[buff_len++] = data[i];
         buff[buff_len] = '\0';
 
@@ -214,28 +198,40 @@ void LZWEncodeData(FILE* source, FILE* output) {
 
         if (elem_code == UNFOUND) {
 
-            InsertToDict(&dict, buff, code);
-
             buff[buff_len - 1] = '\0';
+            buff_len--;
 
-            elem_code = GetCodeFromTable(&dict, buff);
-            fwrite(&elem_code, sizeof(unsigned short), 1, output);
+            WriteCode(GetCodeFromTable(&dict, buff));
 
+            buff[buff_len++] = data[i];
+            buff[buff_len] = '\0';
+
+            if (dict.size >= MAX_DICT_SIZE) {
+
+                dict.size = 0;   // clear dict
+
+                WriteCode(CLEAR_CODE);
+                FillStartDict(&dict);
+
+                buff_len = 0;
+
+                buff[buff_len++] = data[i];
+                code = dict.size;
+            }
+
+            InsertToDict(&dict, buff, code);
             code++;
 
             buff_len = 1;
             buff[0] = data[i];
             buff[buff_len] = '\0';
         }
+
+        i++;
     }
 
-    unsigned short elem_code = GetCodeFromTable(&dict, buff);
-    fwrite(&elem_code, sizeof(unsigned short), 1, output);
-
-    elem_code = END_CODE;
-    fwrite(&elem_code, sizeof(unsigned short), 1, output);
-
-    PrintDict(&dict);
+    WriteCode(GetCodeFromTable(&dict, buff));
+    WriteCode(END_CODE);
 
     delete[] buff;
 }

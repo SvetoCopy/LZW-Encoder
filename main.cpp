@@ -11,7 +11,7 @@ int main(int argc, const char* argv[])
 	fopen_s(&source, argv[1], "r");
 
 	FILE* output = {};
-	fopen_s(&output, argv[2], "w");
+	fopen_s(&output, argv[2], "wb");
 
 	FILE* output2 = {};
 	fopen_s(&output2, "output2.txt", "w");
