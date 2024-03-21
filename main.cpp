@@ -13,8 +13,13 @@ int main(int argc, const char* argv[])
 	FILE* output = {};
 	fopen_s(&output, argv[2], "w");
 
-    LZWEncodeData(source, output);
+	FILE* output2 = {};
+	fopen_s(&output2, "output2.txt", "w");
 
+    LZWEncodeData(source, output);
+	//LZWDecodeData(output, output2);
+
+	fclose(output2);
 	fclose(output);
 	fclose(source);
 
