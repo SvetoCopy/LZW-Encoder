@@ -1,93 +1,24 @@
 #define _CRT_SECURE_NO_WARNINGS
 #include "Encode.h"
 
-Dict::Dict() {
-    dict = (DictElem*)calloc(DICT_INIT_COUNT, sizeof(DictElem));
-    size = 0;
-};
+char* ConcatenateStrWithChar(char* str, char sym) {
+    
+    assert(str != nullptr);
 
-Dict::~Dict() {
-    if (dict != nullptr) {
-        free(dict);
-        size = 0;
-    }
-        
-};
+    size_t str_len = strlen(str);
 
-void InsertToDict(Dict* dict, const char* elem, unsigned short code) {
+    char* new_str = (char*)calloc(str_len + 2, sizeof(char));
 
-    assert(dict != nullptr);
-    assert(elem != nullptr);
-
-    dict->dict[dict->size].key  = _strdup(elem);
-    dict->dict[dict->size].code = code;
-
-    dict->size++;
-}
-
-unsigned short GetCodeFromTable(Dict* dict, char* elem) {
-
-    assert(dict != nullptr);
-    assert(elem != nullptr);
-
-    for (int i = 0; i < dict->size; i++) {
-        if (strcmp(dict->dict[i].key, elem) == 0) {
-            return dict->dict[i].code;
-        }
+    if (new_str == nullptr) {
+        assert(!"calloc error");
     }
 
-    return UNFOUND;
-}
+    strcpy(new_str, str);
 
-bool inTable(Dict* dict, unsigned short code) {
+    new_str[str_len] = sym;
+    new_str[str_len + 1] = '\0';
 
-    assert(dict != nullptr);
-
-    for (int i = 0; i < dict->size; i++) {
-        if (dict->dict[i].code == code) {
-            return true;
-        }
-    }
-
-    return false;
-}
-
-char* GetStrFromTable(Dict* dict, unsigned short code) {
-
-    assert(dict != nullptr);
-
-    for (int i = 0; i < dict->size; i++) {
-        if (dict->dict[i].code == code) {
-            return dict->dict[i].key;
-        }
-    }
-
-    return nullptr;
-}
-
-void PrintDict(Dict* dict) {
-
-    assert(dict != nullptr);
-
-    for (int i = 0; i < dict->size; i++) {
-        
-        assert(dict->dict[i].key != nullptr);
-
-        printf("%s - %hu\n", dict->dict[i].key, dict->dict[i].code);
-    }
-}
-
-void FillStartDict(Dict* dict) {
-
-    assert(dict != nullptr);
-
-    char data[2] = "";
-
-    for (int i = CHAR_MIN; i < CHAR_MAX; i++) {
-        
-        data[0] = (char)i;
-        InsertToDict(dict, data, i - CHAR_MIN);
-    }
+    return new_str;
 }
 
 void LZWDecodeData(FILE* source, FILE* output) {
@@ -96,15 +27,14 @@ void LZWDecodeData(FILE* source, FILE* output) {
     assert(output != nullptr);
 
     Dict dict = Dict();
-
     
-    unsigned short read_buff[MAX_FILE_SIZE] = {};
-    fread(&read_buff, sizeof(unsigned short), MAX_FILE_SIZE, source);
+    Code_t read_buff[MAX_FILE_SIZE] = {};
+    fread(&read_buff, sizeof(Code_t), MAX_FILE_SIZE, source);
 
-    unsigned short code = read_buff[0];
+    Code_t code = read_buff[0];
 
-    unsigned short old_code = 0;
-    unsigned short fill_code = dict.size;
+    Code_t old_code  = 0;
+    Code_t fill_code = dict.size;
     int k = 1;
 
     while (code != END_CODE ) {
@@ -112,30 +42,26 @@ void LZWDecodeData(FILE* source, FILE* output) {
         if (code == CLEAR_CODE) {
 
             dict.size = 0;
+
             FillStartDict(&dict);
             fill_code = dict.size;
             
-            code = read_buff[k];
-            k++;
+            ReadBuffer(code);
 
             if (code == END_CODE) break;   
 
             fprintf(output, "%s", GetStrFromTable(&dict, code));
             old_code = code;
         }
-
         else {
 
             if (inTable(&dict, code)) {
 
                 fprintf(output, "%s", GetStrFromTable(&dict, code));
 
-                char* str_from_code = GetStrFromTable(&dict, code);
+                char* str_from_code     = GetStrFromTable(&dict, code);
                 char* str_from_old_code = GetStrFromTable(&dict, old_code);
-                char* new_str = (char*)calloc(strlen(str_from_old_code) + 2, sizeof(char));
-
-                strcpy(new_str, str_from_old_code);
-                strncat(new_str, str_from_code, 1);
+                char* new_str           = ConcatenateStrWithChar(str_from_old_code, str_from_code[0]);
 
                 InsertToDict(&dict, new_str, fill_code);
                 fill_code++;
@@ -143,27 +69,20 @@ void LZWDecodeData(FILE* source, FILE* output) {
                 free(new_str);
                 old_code = code;
             }
-
             else {
+
                 char* str_from_old_code = GetStrFromTable(&dict, old_code);
+                char* new_str = ConcatenateStrWithChar(str_from_old_code, str_from_old_code[0]);
 
-                char str_firstchar[2] = "";
-                str_firstchar[0] = str_from_old_code[0];
+                fprintf(output, "%s", new_str);
+                InsertToDict(&dict, new_str, fill_code);
 
-                char* strcat_codes = (char*)calloc(strlen(str_firstchar) + strlen(str_from_old_code), sizeof(char));
-
-                strcpy(strcat_codes, str_from_old_code);
-                strcat(strcat_codes, str_firstchar);
-
-                fprintf(output, "%s", strcat_codes);
-                InsertToDict(&dict, strcat_codes, fill_code);
                 fill_code++;
-
                 old_code = code;
             }
         }
-        code = read_buff[k];
-        k++;
+
+        ReadBuffer(code);
     }
 }
 
@@ -178,23 +97,21 @@ void LZWEncodeData(FILE* source, FILE* output) {
     Dict dict = Dict();
     FillStartDict(&dict);
 
-
-    char* buff = (char*)calloc(MAX_BUFF_SIZE, sizeof(char));
+    char*  buff     = (char*)calloc(MAX_BUFF_SIZE, sizeof(char));
     size_t buff_len = 0;
 
-    unsigned short elem_code = 0;
+    Code_t elem_code = 0;
     WriteCode(CLEAR_CODE);
 
-    unsigned short code = dict.size;
+    Code_t code = dict.size;
 
     int i = 0;
 
     while (data[i] != EOF) { 
 
-        buff[buff_len++] = data[i];
-        buff[buff_len] = '\0';
+        AddToBufferChar(data[i]);
 
-        unsigned short elem_code = GetCodeFromTable(&dict, buff);
+        Code_t elem_code = GetCodeFromTable(&dict, buff);
 
         if (elem_code == UNFOUND) {
 
@@ -203,8 +120,7 @@ void LZWEncodeData(FILE* source, FILE* output) {
 
             WriteCode(GetCodeFromTable(&dict, buff));
 
-            buff[buff_len++] = data[i];
-            buff[buff_len] = '\0';
+            AddToBufferChar(data[i]);
 
             if (dict.size >= MAX_DICT_SIZE) {
 
@@ -214,17 +130,15 @@ void LZWEncodeData(FILE* source, FILE* output) {
                 FillStartDict(&dict);
 
                 buff_len = 0;
+                AddToBufferChar(data[i]);
 
-                buff[buff_len++] = data[i];
                 code = dict.size;
             }
 
             InsertToDict(&dict, buff, code);
             code++;
 
-            buff_len = 1;
-            buff[0] = data[i];
-            buff[buff_len] = '\0';
+            FillBufferWithChar(data[i]);
         }
 
         i++;

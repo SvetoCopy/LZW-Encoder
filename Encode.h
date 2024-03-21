@@ -1,36 +1,33 @@
 #pragma once        
-#include "assert.h"
-#include "string.h"
-#include "iostream"
-#include "stdlib.h"
-#include "limits"
-                                      
+#include "Dictionary.h"                                 
+
 #define WriteCode(code)                                         \
         elem_code = code;                                       \
-        fwrite(&elem_code, sizeof(unsigned short), 1, output);  \
+        fwrite(&elem_code, sizeof(Code_t), 1, output);          \
 
-const unsigned short CLEAR_CODE = 65535;
-const unsigned short END_CODE   = 65534;
+#define FillBufferWithChar(sym)                                 \
+        buff_len = 1;                                           \
+        buff[0] = sym;                                          \
+        buff[buff_len] = '\0';                              
 
-const int   DICT_INIT_COUNT = 65536;
+#define AddToBufferChar(sym)                                    \
+        buff[buff_len++] = sym;                                 \
+        buff[buff_len] = '\0';  
+
+#define ReadBuffer(code)                                        \
+        code = read_buff[k];                                    \
+        k++;                                                    
+
+const Code_t CLEAR_CODE = 65535;
+const Code_t END_CODE   = 65534;
+
 const int   MAX_DICT_SIZE   = 65536;
-const int   MAX_FILE_SIZE   = 100182;
-const int   MAX_BUFF_SIZE   = 200000;
+const int   MAX_FILE_SIZE   = 500182;
+const int   MAX_BUFF_SIZE   = 900000;
 
-const unsigned short UNFOUND = 65536;
-
-struct DictElem {
-    char* key;
-    unsigned short code;
-};
-
-struct Dict {
-
-    Dict();
-    ~Dict();
-
-    DictElem* dict;
-    size_t size;
+enum WorkMode {
+    ENCODE = 1,
+    DECODE = 2
 };
 
 void LZWEncodeData(FILE* source, FILE* output);
