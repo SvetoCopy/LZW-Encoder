@@ -9,10 +9,11 @@ typedef unsigned short Code_t;
 
 const int DICT_INIT_COUNT = 65536;
 
-const Code_t UNFOUND = 65536;
+const Code_t UNFOUND = 65533;
 
 struct DictElem {
-    char* key;
+    char*  key;
+    size_t key_size;
     Code_t code;
 };
 
@@ -22,15 +23,15 @@ struct Dict {
     ~Dict();
 
     DictElem* dict;
-    size_t size;
+    size_t    size;
 };
 
-Code_t GetCodeFromTable(Dict* dict, char* elem);
+Code_t GetCodeFromTable(Dict* dict, char* elem, size_t elem_size);
 
-void InsertToDict(Dict* dict, const char* elem, Code_t code);
+void InsertToDict(Dict* dict, const char* elem, size_t elem_size, Code_t code);
 bool inTable(Dict* dict, Code_t code);
 
-char* GetStrFromTable(Dict* dict, Code_t code);
+DictElem GetStrFromTable(Dict* dict, Code_t code);
 
 void PrintDict(Dict* dict);
 void FillStartDict(Dict* dict);

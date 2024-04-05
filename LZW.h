@@ -21,8 +21,9 @@
 const Code_t CLEAR_CODE = 65535;
 const Code_t END_CODE   = 65534;
 
+const int   MAX_CODE        = 65532;
 const int   MAX_DICT_SIZE   = 65536;
-const int   MAX_FILE_SIZE   = 500182;
+const int   MAX_FILE_SIZE   = 600182;
 const int   MAX_BUFF_SIZE   = 900000;
 
 enum WorkMode {
@@ -32,3 +33,5 @@ enum WorkMode {
 
 void LZWEncodeData(FILE* source, FILE* output);
 void LZWDecodeData(FILE* source, FILE* output);
+
+long GetFileSize(FILE* file);
